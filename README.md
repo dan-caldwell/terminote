@@ -1,6 +1,6 @@
-# Node CLI Template
+# Terminote
 
-This is a template for creating a Node.js CLI.
+Make notes in your terminal extremely quickly. No need to name the files.
 
 ## Install the CLI
 
@@ -8,4 +8,12 @@ This is a template for creating a Node.js CLI.
 
 ## Use the CLI
 
-```cli-example```
+```note```
+
+This will open nano with your note for the day.
+
+## Configure note path
+
+You can configure the path the notes should go with the `--path` flag.
+
+```note --path /Users/yourname/Documents/Notes```

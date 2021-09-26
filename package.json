@@ -10,6 +10,10 @@
   "author": "",
   "license": "ISC",
   "bin": {
-    "cli-example": "index.js"
+    "note": "index.js"
+  },
+  "dependencies": {
+    "fs-extra": "^10.0.0",
+    "yargs": "^17.2.1"
   }
 }
