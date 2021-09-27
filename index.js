@@ -21,7 +21,7 @@ const updateNotePath = (notePath = true) => {
     console.log('Updated note path:', config.path);
 }
 
-const createNewNote = async (dateObj) => {
+const getNotePathFromDate = async (dateObj) => {
     // Make sure config exists
     const pathExists = fs.pathExistsSync(configPath);
     if (!pathExists) updateNotePath();
@@ -31,9 +31,33 @@ const createNewNote = async (dateObj) => {
     const date = dateformat(dateObj, 'ddd-mmm-dd-yyyy');
     const notePath = config.path + '/' + date + '.txt';
     fs.ensureFileSync(notePath);
+    return notePath;
+}
+
+const createNewNote = async (dateObj) => {
+    const notePath = await getNotePathFromDate(dateObj);
     spawn('nano', [notePath], {
         stdio: 'inherit'
     });
+}
+
+const previousDate = (prevDateNum = 0) => {
+    const date = new Date();
+    date.setDate(date.getDate() - Math.abs(prevDateNum));
+    return date;
+}
+
+const goToDate = (prevDateNum) => {
+    const date = previousDate(prevDateNum);
+    createNewNote(date);
+}
+
+const previewNote = async (prevDateNum) => {
+    const date = previousDate(prevDateNum);
+    const notePath = await getNotePathFromDate(date);
+    // Cat wasn't working so I'm just console.logging the file
+    const file = fs.readFileSync(notePath);
+    console.log(file.toString());
 }
 
 
@@ -53,11 +77,22 @@ if (argv.open) {
 
 // Go to a previous note
 if (argv._.length) {
-    if (typeof argv._[0] === "number" && argv._[0] < 0) {
-        const date = new Date();
-        date.setDate(date.getDate() - Math.abs(argv._[0]));
-        createNewNote(date);
+    const dateNum = argv._[0];
+    if (typeof dateNum === "number" && dateNum < 0) {
+        if (argv.p) {
+            // Preview the note
+           previewNote(dateNum);
+        } else {
+            // Open the note
+            goToDate(dateNum);
+        }
     }
+    return;
+}
+
+// Preview a note
+if (argv.p) {
+    previewNote(typeof argv.p === "number" ? argv.p : null);
     return;
 }
 
