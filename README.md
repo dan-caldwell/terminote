@@ -24,6 +24,10 @@ If you want to simply preview a note, you can use the `-p` flag. If you want to 
 
 ```note -p -2``` or ```note -2 -p```
 
+If you want to preview a week of previous notes, you can use:
+
+```note -p week```
+
 ## Open the notes folder
 
 ```note --open```

@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const dateformat = require('./dateformat');
 const { spawn } = require('child_process');
+const chalk = require('chalk');
 
 // Set the path to use the notes
 
@@ -28,7 +29,7 @@ const getNotePathFromDate = async (dateObj) => {
     const configStr = fs.readFileSync(configPath).toString();
     const config = JSON.parse(configStr);
     // Make a new txt file based on the day
-    const date = dateformat(dateObj, 'ddd-mmm-dd-yyyy');
+    const date = dateformat(dateObj, 'yyyy-mm-dd-ddd');
     const notePath = config.path + '/' + date + '.txt';
     fs.ensureFileSync(notePath);
     return notePath;
@@ -57,7 +58,20 @@ const previewNote = async (prevDateNum) => {
     const notePath = await getNotePathFromDate(date);
     // Cat wasn't working so I'm just console.logging the file
     const file = fs.readFileSync(notePath);
-    console.log(file.toString());
+    const str = file.toString();
+    const divider = chalk.blueBright('-'.repeat(notePath.length));
+    console.log(divider);
+    console.log(chalk.blueBright.italic(notePath));
+    console.log(divider);
+    console.log(chalk.yellowBright(str.trim()));
+    console.log(divider);
+}
+
+// Previews a previous amount of notes
+const previewListOfNotes = async (numNotes) => {
+    for (let i = 1; i <= numNotes; i++) {
+        await previewNote(-i);
+    }
 }
 
 
@@ -92,7 +106,13 @@ if (argv._.length) {
 
 // Preview a note
 if (argv.p) {
-    previewNote(typeof argv.p === "number" ? argv.p : null);
+    const prevNumber = typeof argv.p === "number" ? argv.p : null;
+
+    if (argv.p === "week") {
+        previewListOfNotes(7);
+    } else {
+        previewNote(prevNumber);
+    }
     return;
 }
 
