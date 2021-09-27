@@ -59,7 +59,7 @@ const previewNote = async (prevDateNum) => {
     // Cat wasn't working so I'm just console.logging the file
     const file = fs.readFileSync(notePath);
     const str = file.toString();
-    const divider = chalk.blueBright('-'.repeat(notePath.length));
+    const divider = chalk.blueBright('–'.repeat(notePath.length));
     console.log(divider);
     console.log(chalk.blueBright.italic(notePath));
     console.log(divider);
@@ -69,7 +69,7 @@ const previewNote = async (prevDateNum) => {
 
 // Previews a previous amount of notes
 const previewListOfNotes = async (numNotes) => {
-    for (let i = 1; i <= numNotes; i++) {
+    for (let i = numNotes; i >= 0; i--) {
         await previewNote(-i);
     }
 }
