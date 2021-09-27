@@ -9,8 +9,9 @@ const { spawn } = require('child_process');
 
 // Set the path to use the notes
 
+const configPath = path.join(__dirname, './config.json');
+
 const updateNotePath = (notePath = true) => {
-    const configPath = path.join(__dirname, './config.json');
     fs.ensureFileSync(configPath);
     const configStr = fs.readFileSync(configPath).toString();
     const config = configStr ? JSON.parse(configStr) : { path: '' };
@@ -20,19 +21,14 @@ const updateNotePath = (notePath = true) => {
     console.log('Updated note path:', config.path);
 }
 
-if (argv.path) {
-    updateNotePath(argv.path);
-}
-
-const createNewNote = async () => {
+const createNewNote = async (dateObj) => {
     // Make sure config exists
-    const configPath = path.join(__dirname, './config.json');
     const pathExists = fs.pathExistsSync(configPath);
     if (!pathExists) updateNotePath();
     const configStr = fs.readFileSync(configPath).toString();
     const config = JSON.parse(configStr);
     // Make a new txt file based on the day
-    const date = dateformat(new Date(), 'ddd-mmm-dd-yyyy');
+    const date = dateformat(dateObj, 'ddd-mmm-dd-yyyy');
     const notePath = config.path + '/' + date + '.txt';
     fs.ensureFileSync(notePath);
     spawn('nano', [notePath], {
@@ -40,4 +36,30 @@ const createNewNote = async () => {
     });
 }
 
-createNewNote();
+
+// Set the notes path
+if (argv.path) {
+    updateNotePath(argv.path);
+    return;
+}
+
+// Open the notes folder
+if (argv.open) {
+    const configStr = fs.readFileSync(configPath).toString();
+    const config = JSON.parse(configStr);
+    spawn('open', [config.path]);
+    return;
+}
+
+// Go to a previous note
+if (argv._.length) {
+    if (typeof argv._[0] === "number" && argv._[0] < 0) {
+        const date = new Date();
+        date.setDate(date.getDate() - Math.abs(argv._[0]));
+        createNewNote(date);
+    }
+    return;
+}
+
+// Initialize note
+createNewNote(new Date());
