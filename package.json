@@ -10,7 +10,9 @@
   "author": "",
   "license": "ISC",
   "bin": {
-    "note": "index.js"
+    "note": "index.js",
+    "div": "div.js",
+    "section": "section.js"
   },
   "dependencies": {
     "chalk": "^4.1.2",

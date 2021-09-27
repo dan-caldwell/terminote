@@ -59,8 +59,9 @@ const previewNote = async (prevDateNum) => {
     // Cat wasn't working so I'm just console.logging the file
     const file = fs.readFileSync(notePath);
     const str = file.toString();
-    const divider = chalk.blueBright('–'.repeat(notePath.length));
-    console.log(divider);
+    const len = notePath.length;
+    const divider = chalk.blueBright('▀'.repeat(len));
+    console.log(chalk.blueBright('▄').repeat(len));
     console.log(chalk.blueBright.italic(notePath));
     console.log(divider);
     console.log(chalk.yellowBright(str.trim()));
