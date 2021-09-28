@@ -1,2 +1,4 @@
 [ ] Work mode
 [ ] Search notes from CLI
+[ ] Open note by ID (e.g. 1, 2, 3, 4, 5)
+[ ] Need to group search terms together if they're close together to prevent duplicate console.logs of matches

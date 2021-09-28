@@ -14,8 +14,7 @@ const configPath = path.join(__dirname, './config.json');
 
 const updateNotePath = (notePath = true) => {
     fs.ensureFileSync(configPath);
-    const configStr = fs.readFileSync(configPath).toString();
-    const config = configStr ? JSON.parse(configStr) : { path: '' };
+    const config = getConfig();
     // Set the config path
     config.path = typeof notePath === "string" ? notePath : process.cwd();
     fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
@@ -26,8 +25,7 @@ const getNotePathFromDate = async (dateObj) => {
     // Make sure config exists
     const pathExists = fs.pathExistsSync(configPath);
     if (!pathExists) updateNotePath();
-    const configStr = fs.readFileSync(configPath).toString();
-    const config = JSON.parse(configStr);
+    const config = getConfig();
     // Make a new txt file based on the day
     const date = dateformat(dateObj, 'yyyy-mm-dd-ddd');
     const notePath = config.path + '/' + date + '.txt';
@@ -53,6 +51,21 @@ const goToDate = (prevDateNum) => {
     createNewNote(date);
 }
 
+const logNotePathHeader = (notePath, dividerLength) => {
+    const divider = chalk.blueBright('▀'.repeat(dividerLength));
+    console.log(chalk.blueBright('▄').repeat(dividerLength));
+    console.log(chalk.blueBright.italic(notePath));
+    console.log(divider);
+}
+
+const previewLog = (str, dividerLength, notePath, useColoredText = true) => {
+    const mainText = useColoredText ? chalk.yellowBright(str.trim()) : str.trim();
+    const divider = chalk.blueBright('▀'.repeat(dividerLength));
+    logNotePathHeader(notePath, dividerLength);
+    console.log(mainText);
+    console.log(divider);
+}
+
 const previewNote = async (prevDateNum) => {
     const date = previousDate(prevDateNum);
     const notePath = await getNotePathFromDate(date);
@@ -60,12 +73,12 @@ const previewNote = async (prevDateNum) => {
     const file = fs.readFileSync(notePath);
     const str = file.toString();
     const len = notePath.length;
-    const divider = chalk.blueBright('▀'.repeat(len));
-    console.log(chalk.blueBright('▄').repeat(len));
-    console.log(chalk.blueBright.italic(notePath));
-    console.log(divider);
-    console.log(chalk.yellowBright(str.trim()));
-    console.log(divider);
+    previewLog(str.trim(), len, notePath);
+}
+
+const getConfig = () => {
+    const configStr = fs.readFileSync(configPath).toString();
+    return configStr ? JSON.parse(configStr) : { path: '' };
 }
 
 // Previews a previous amount of notes
@@ -74,6 +87,61 @@ const previewListOfNotes = async (numNotes) => {
         await previewNote(-i);
     }
 }
+
+const getAllFilesInDir = (dirPath, deep = true) => {
+    const files = fs.readdirSync(dirPath);
+    let arrayOfFiles = [];
+    files.forEach(file => {
+        const fullPath = dirPath + "/" + file;
+        // Check if the full path exists
+        const exists = fs.existsSync(fullPath);
+        if (!exists) return console.log(chalk.redBright('File does not exist', fullPath));
+        if (fs.statSync(fullPath).isDirectory() && deep) {
+            arrayOfFiles = arrayOfFiles.concat(getAllFilesInDir(dirPath, deep));
+        } else {
+            if (exists && fullPath.endsWith('.txt')) {
+                const parsedFile = fs.readFileSync(fullPath);
+                arrayOfFiles.push({
+                    directory: fullPath,
+                    data: parsedFile.toString()
+                });
+            }
+        }
+    });
+    return arrayOfFiles;
+}
+
+const searchNotes = (searchTerm) => {
+    const config = getConfig();
+    const files = getAllFilesInDir(config.path);
+    files.forEach(file => {
+        const includes = file.data.includes(searchTerm);
+        if (!includes) return;
+        const regex = new RegExp(searchTerm, 'g');
+        const rawMatches = file.data.matchAll(regex);
+        if (!rawMatches) return;
+        const matches = Array.from(rawMatches);
+        logNotePathHeader(file.directory, file.directory.length);
+        matches.forEach(match => {
+            const padding = 100;
+            const start = match.index - padding > 0 ? match.index - padding : 0;
+            const end = match.index + padding;
+            const textSlice = file.data.slice(start, end);
+            console.log(chalk.greenBright('–').repeat(file.directory.length));
+            console.log(textSlice.replace(regex, chalk.bgYellowBright.black(searchTerm)));
+            console.log(chalk.greenBright('–').repeat(file.directory.length));
+        });
+        //console.dir(Array.from(matches));
+        //const output = file.data.replace(regex, chalk.bgYellowBright.black(searchTerm));
+        //previewLog(output, file.directory.length, file.directory, false);
+    });
+}
+
+if (argv.search) {
+    searchNotes(argv.search);
+    return;
+}
+
 
 
 // Set the notes path
@@ -84,8 +152,7 @@ if (argv.path) {
 
 // Open the notes folder
 if (argv.open) {
-    const configStr = fs.readFileSync(configPath).toString();
-    const config = JSON.parse(configStr);
+    const config = getConfig();
     spawn('open', [config.path]);
     return;
 }
