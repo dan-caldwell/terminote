@@ -11,6 +11,7 @@ const chalk = require('chalk');
 // Set the path to use the notes
 
 const configPath = path.join(__dirname, './config.json');
+const refListPath = path.join(__dirname, './refList.json');
 
 const updateNotePath = (notePath = true) => {
     fs.ensureFileSync(configPath);
@@ -35,9 +36,11 @@ const getNotePathFromDate = async (dateObj) => {
 
 const createNewNote = async (dateObj) => {
     const notePath = await getNotePathFromDate(dateObj);
-    spawn('nano', [notePath], {
+    const currentNote = spawn('nano', [notePath], {
         stdio: 'inherit'
     });
+    // Register new refs
+    currentNote.on('close', () => registerRefsFromNote(notePath));
 }
 
 const previousDate = (prevDateNum = 0) => {
@@ -111,41 +114,125 @@ const getAllFilesInDir = (dirPath, deep = true) => {
     return arrayOfFiles;
 }
 
-const searchNotes = (searchTerm) => {
+const searchNote = ({ file, searchTerm, refList, matchCallback }) => {
+    const includes = file.data.includes(searchTerm);
+    if (!includes) {
+        matchCallback(file, includes, searchTerm, refList);
+        return;
+    }
+    const regex = new RegExp(searchTerm, 'gi');
+    const rawMatches = file.data.matchAll(regex);
+    if (!rawMatches) {
+        matchCallback(file, rawMatches, searchTerm, refList);
+        return;
+    }
+    const matches = Array.from(rawMatches);
+    matchCallback(file, matches, searchTerm, refList);
+}
+
+const searchNotes = (searchTerm, matchCallback) => {
     const config = getConfig();
+    const refListData = fs.readFileSync(refListPath).toString();
+    const refList = searchTerm.includes('ref:') && refListData ? JSON.parse(refListData) : null;
     const files = getAllFilesInDir(config.path);
-    files.forEach(file => {
-        const includes = file.data.includes(searchTerm);
-        if (!includes) return;
-        const regex = new RegExp(searchTerm, 'g');
-        const rawMatches = file.data.matchAll(regex);
-        if (!rawMatches) return;
-        const matches = Array.from(rawMatches);
-        logNotePathHeader(file.directory, file.directory.length);
-        matches.forEach(match => {
-            const padding = 100;
-            const start = match.index - padding > 0 ? match.index - padding : 0;
-            const end = match.index + padding;
-            const textSlice = file.data.slice(start, end);
-            console.log(chalk.greenBright('–').repeat(file.directory.length));
-            console.log(textSlice.replace(regex, chalk.bgYellowBright.black(searchTerm)));
-            console.log(chalk.greenBright('–').repeat(file.directory.length));
-        });
-        //console.dir(Array.from(matches));
-        //const output = file.data.replace(regex, chalk.bgYellowBright.black(searchTerm));
-        //previewLog(output, file.directory.length, file.directory, false);
+    files.forEach(file => searchNote({ file, searchTerm, refList, matchCallback }));
+}
+
+const foundNotesCallback = (file, matches, searchTerm) => {
+    if (!matches) return;
+    logNotePathHeader(file.directory, file.directory.length);
+    matches.forEach(match => {
+        const padding = 100;
+        const start = match.index - padding > 0 ? match.index - padding : 0;
+        const end = match.index + padding;
+        const textSlice = file.data.slice(start, end);
+        console.log(chalk.greenBright('–').repeat(file.directory.length));
+        console.log(textSlice.replace(regex, chalk.bgYellowBright.black(searchTerm)));
+        console.log(chalk.greenBright('–').repeat(file.directory.length));
     });
 }
 
+
+const foundReferenceCallback = (file, matches, searchTerm, refList) => {
+    let alteredRefList = false;
+    if (!matches && searchTerm !== "ref:") {
+        if (refList && refList[searchTerm]) {
+            delete refList[searchTerm];
+            fs.writeFileSync(refListPath, JSON.stringify(refList, null, 4));
+        }
+        return;
+    }
+    matches.forEach(match => {
+        const dataFromMatchIndex = file.data.slice(match.index);
+        const backtickMatchesRaw = dataFromMatchIndex.matchAll(/```/g);
+        const backtickMatches = Array.from(backtickMatchesRaw);
+        if (!backtickMatches.length) return;
+        // Log the data between the first two matches
+        const start = backtickMatches[0].index;
+        const end = backtickMatches[1] ? backtickMatches[1].index : undefined;
+        const refInfo = dataFromMatchIndex.slice(start + 3, end).trim();
+        const descriptionRegex = new RegExp(`${match[0]}\((.*)\)`);
+        const refDescriptionMatch = dataFromMatchIndex.match(descriptionRegex);
+        const refDescription = refDescriptionMatch ? refDescriptionMatch[1].slice(1, refDescriptionMatch[1].length - 1) : '';
+        if (searchTerm !== "ref:" && !refList) {
+            refList = {};
+            alteredRefList = true;
+        }
+        if (searchTerm !== "ref:" && !refList[match[0]]) {
+            refList[match[0]] = refDescription;
+            alteredRefList = true;
+        }
+        // Registering the ref, so don't log it
+        if (searchTerm === "ref:") {
+            console.log(refInfo, match[0])
+        } else {
+            console.log(refInfo);
+        }
+    });
+    if (alteredRefList) {
+        fs.writeFileSync(refListPath, JSON.stringify(refList, null, 4));
+    }
+}
+
+const registerRefsFromNote = (notePath) => {
+    const noteData = fs.readFileSync(notePath).toString();
+    const file = {
+        data: noteData,
+    }
+    searchNote({
+        file,
+        searchTerm: 'ref:',
+        matchCallback: foundReferenceCallback
+    })
+}
+
+
 if (argv.search) {
-    searchNotes(argv.search);
+    searchNotes(argv.search, foundNotesCallback);
+    return;
+}
+
+if (argv._.includes('ref')) {
+    fs.ensureFileSync(refListPath);
+    if (argv.list) {
+        const refListData = fs.readFileSync(refListPath).toString();
+        const refList = refListData ? JSON.parse(refListData) : {};
+        const entries = Object.entries(refList);
+        entries.forEach(entry => {
+            const key = entry[0].replace('ref:', '');
+            console.log(`${chalk.greenBright.bold(key)} - ${entry[1]}`)
+        });
+        return;
+    }
+    const refName = argv._[1];
+    searchNotes('ref:' + refName, foundReferenceCallback);
     return;
 }
 
 
-
 // Set the notes path
 if (argv.path) {
+    
     updateNotePath(argv.path);
     return;
 }
@@ -154,6 +241,7 @@ if (argv.path) {
 if (argv.open) {
     const config = getConfig();
     spawn('open', [config.path]);
+
     return;
 }
 
