@@ -5,4 +5,4 @@
 [ ] Cached search results? (maybe if file has not been modified)
 [ ] CLI update (make it easier to update the app from the CLI) -> `note update`
 [ ] Ability to make shortcuts (and list shortcuts) to quickly reference without having the search preview cut off
-    [ ] Register ref when closing out file if it hasn't been registered already - currently done with registerRefsFromNote and the foundReferenceCallback
+    [ ] Register ref when closing out file if it hasn't been registered already -> can do this via the differences between old and new refs from registerRefsFromNote
