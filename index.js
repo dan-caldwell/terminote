@@ -48,34 +48,33 @@ const getRefNameFromMatch = (refMatch) => {
     const regex = /\((.*)\)/;
     const refNameAndDesc = refMatch.replace('ref:', '').trim();
     const refName = refNameAndDesc.replace(regex, '');
-    return refName;
+    const refDescriptionMatch = refNameAndDesc.match(regex);
+    const refDescription = refDescriptionMatch ? refDescriptionMatch[1] : '';
+    return {name: refName, description: refDescription};
 }
 
 const registerRefsFromNote = (notePath, noteDataBefore) => {
     const noteData = fs.readFileSync(notePath).toString();
     const refList = getRefList();
-    const file = {
-        data: noteData,
-    }
-    searchNote({
-        refList,
-        file,
-        searchTerm: 'ref:',
-        matchCallback: foundReferenceCallback
-    });
     // Delete old refs if they have been removed
     const refRegex = /ref:(.*)[\(\n]/g
     // Before change
-    const allBeforeRefs = noteDataBefore.match(refRegex);
+    const allBeforeRefs = noteDataBefore.match(refRegex) || [];
     const refNamesBefore = allBeforeRefs.map(getRefNameFromMatch);
     // After change
-    const allAfterRefs = noteData.match(refRegex);
+    const allAfterRefs = noteData.match(refRegex) || [];
     const refNamesAfter = allAfterRefs.map(getRefNameFromMatch);
 
-    // NOTE:
-    // Can probably just register the refs with this, by finding what refs have been added and what refs have been deleted,
-    // rather than using the searchNote function
-    console.log(refNamesAfter, refNamesBefore);
+    // Get added and deleted refs
+    const addedRefs = refNamesAfter.filter(ref => !refNamesBefore.find(beforeRef => beforeRef.name === ref.name && beforeRef.description === ref.description));
+    const deletedRefs = refNamesBefore.filter(ref => !refNamesAfter.find(afterRef => afterRef.name === ref.name && afterRef.description === ref.description));
+    // Add the added refs
+    addedRefs.forEach(ref => { refList[ref.name] = ref.description });
+    // Delete the deleted refs
+    deletedRefs.forEach(ref => { delete refList[ref.name] });
+    // Add any refs that weren't previously added
+    refNamesAfter.forEach(ref => { refList[ref.name] = ref.description });
+    fs.writeFileSync(refListPath, JSON.stringify(refList, null, 4));
 }
 
 const previousDate = (prevDateNum = 0) => {
@@ -167,8 +166,7 @@ const searchNote = ({ file, searchTerm, refList, matchCallback }) => {
 
 const searchNotes = (searchTerm, matchCallback) => {
     const config = getConfig();
-    const refListData = fs.readFileSync(refListPath).toString();
-    const refList = searchTerm.includes('ref:') && refListData ? JSON.parse(refListData) : null;
+    const refList = searchTerm.includes('ref:') ? getRefList() : null;
     const files = getAllFilesInDir(config.path);
     files.forEach(file => searchNote({ file, searchTerm, refList, matchCallback }));
 }
@@ -200,21 +198,8 @@ const foundReferenceCallback = (file, matches, searchTerm, refList) => {
         const end = backtickMatches[1] ? backtickMatches[1].index : undefined;
         const refInfo = dataFromMatchIndex.slice(start + 3, end).trim();
 
-        // Closing out of a file to find all the refs
-        if (searchTerm === "ref:") {
-            // Get the name of the ref
-            const regex = /\((.*)\)/;
-            const refNameAndDesc = dataFromMatchIndex.slice(0, start).replace('ref:', '').trim();
-            const refName = refNameAndDesc.replace(regex, '');
-            const refDescriptionMatch = refNameAndDesc.match(regex);
-            const refDescription = refDescriptionMatch ? refDescriptionMatch[1] : '';
-            // Add ref info to the refList
-            if (!refList[`ref:${refName}`]) {
-                refList[`ref:${refName}`] = refDescription
-                alteredRefList = true;
-            }
-            return;
-        }
+        // Get the name of the ref
+        const refName = searchTerm.replace('ref:', '');
 
         const descriptionRegex = new RegExp(`${match[0]}\((.*)\)`);
         const refDescriptionMatch = dataFromMatchIndex.match(descriptionRegex);
@@ -223,8 +208,8 @@ const foundReferenceCallback = (file, matches, searchTerm, refList) => {
             refList = {};
             alteredRefList = true;
         }
-        if (!refList[match[0]]) {
-            refList[match[0]] = refDescription;
+        if (!refList[refName]) {
+            refList[refName] = refDescription;
             alteredRefList = true;
         }
         console.log(refInfo);
@@ -261,10 +246,10 @@ if (argv._.includes('ref')) {
         const refList = getRefList();
         const entries = Object.entries(refList);
         entries.forEach(entry => {
-            const key = entry[0].replace('ref:', '');
+            const key = entry[0];
             const desc = entry[1] ? ` - ${entry[1]}` : '';
             console.log(`${chalk.greenBright.bold(key)}${chalk.italic.yellow(desc)}`)
-            searchNotes(entry[0], foundReferenceCallback);
+            searchNotes(`ref:${entry[0]}`, foundReferenceCallback);
             console.log(chalk.greenBright('–'.repeat(30)));
         });
         return;
