@@ -1,8 +1,10 @@
+[√] Search notes from CLI
+[√] Ability to make shortcuts (and list shortcuts) to quickly reference without having the search preview cut off
+    [√] Register ref when closing out file if it hasn't been registered already -> can do this via the differences between old and new refs from registerRefsFromNote
+[√] Open note by ID (e.g. 1, 2, 3, 4, 5)
+[ ] --edit flag to open a file to edit a ref
 [ ] Work mode
-[ ] Search notes from CLI
-[ ] Open note by ID (e.g. 1, 2, 3, 4, 5)
 [ ] Need to group search terms together if they're close together to prevent duplicate console.logs of matches
 [ ] Cached search results? (maybe if file has not been modified)
 [ ] CLI update (make it easier to update the app from the CLI) -> `note update`
-[ ] Ability to make shortcuts (and list shortcuts) to quickly reference without having the search preview cut off
-    [ ] Register ref when closing out file if it hasn't been registered already -> can do this via the differences between old and new refs from registerRefsFromNote
+[ ] Set up help (probably via yargs) 
