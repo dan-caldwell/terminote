@@ -3,35 +3,36 @@ const { logNotePathHeader } = require('./log');
 const { getAllFilesInDir, getConfig } = require('./file');
 const { getRefList } = require('./refs');
 
-const searchNote = ({ file, searchTerm, refList, matchCallback }) => {
-    const includes = file.data.includes(searchTerm);
-    if (!includes) {
-        return matchCallback(file, includes, searchTerm, refList);
-    }
-    const regex = new RegExp(searchTerm, 'gi');
-    const rawMatches = file.data.matchAll(regex);
-    if (!rawMatches) {
-        return matchCallback(file, rawMatches, searchTerm, refList);
-    }
-    const matches = Array.from(rawMatches);
-    return matchCallback(file, matches, searchTerm, refList);
-}
+// const searchNote = ({ file, searchTerm, refList, matchCallback }) => {
+//     const includes = file.data.includes(searchTerm);
+//     if (!includes) {
+//         return matchCallback(file, includes, searchTerm, refList);
+//     }
+//     const regex = new RegExp(searchTerm, 'gi');
+//     const rawMatches = file.data.matchAll(regex);
+//     if (!rawMatches) {
+//         return matchCallback(file, rawMatches, searchTerm, refList);
+//     }
+//     const matches = Array.from(rawMatches);
+//     return matchCallback(file, matches, searchTerm, refList);
+// }
 
-const searchNotes = (searchTerm, matchCallback) => {
-    const config = getConfig();
-    const refList = searchTerm.includes('ref:') ? getRefList() : null;
-    const files = getAllFilesInDir(config.path);
-    const foundFiles = [];
-    files.forEach(file => {
-        const foundDirectory = searchNote({ file, searchTerm, refList, matchCallback });
-        if (foundDirectory) foundFiles.push(foundDirectory);
-    });
-    return foundFiles;
-}
+// const searchNotes = (searchTerm, matchCallback) => {
+//     const config = getConfig();
+//     const refList = searchTerm.includes('ref:') ? getRefList() : null;
+//     const files = getAllFilesInDir(config.path);
+//     const foundFiles = [];
+//     files.forEach(file => {
+//         const foundDirectory = searchNote({ file, searchTerm, refList, matchCallback });
+//         if (foundDirectory) foundFiles.push(foundDirectory);
+//     });
+//     return foundFiles;
+// }
 
 const foundNotesCallback = (file, matches, searchTerm) => {
     if (!matches) return;
     logNotePathHeader(file.directory, file.directory.length);
+    const regex = new RegExp(searchTerm, 'gi');
     matches.forEach(match => {
         const padding = 100;
         const start = match.index - padding > 0 ? match.index - padding : 0;

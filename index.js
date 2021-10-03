@@ -8,65 +8,93 @@ const dateformat = require('./dateformat');
 const { spawn } = require('child_process');
 const chalk = require('chalk');
 
-const { searchNotes, foundNotesCallback } = require('./components/search');
 const { foundReferenceCallback, getRefList, registerRefsFromNote } = require('./components/refs');
 const { previewLog } = require('./components/log');
 const { getConfig, configPath } = require('./components/file');
 
-const updateNotePath = (notePath = true) => {
-    fs.ensureFileSync(configPath);
-    const config = getConfig();
-    // Set the config path
-    config.path = typeof notePath === "string" ? notePath : process.cwd();
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
-    console.log('Updated note path:', config.path);
+
+const Path = require('./classes/Path');
+const Open = require('./classes/Open');
+const Utils = require('./classes/Utils');
+const Search = require('./classes/Search');
+
+// Set the notes path
+if (argv.path) {
+    Path.updateNotes(argv.path);
+    return;
 }
 
-const getNotePathFromDate = async (dateObj) => {
-    // Make sure config exists
-    const pathExists = fs.pathExistsSync(configPath);
-    if (!pathExists) updateNotePath();
-    const config = getConfig();
-    // Add 6 hours because dateformat returns the wrong date if the time is exactly at 00:00:00.000
-    dateObj.setHours(dateObj.getHours() + 6);
-    // Make a new txt file based on the day
-    const date = dateformat(dateObj, 'yyyy-mm-dd-ddd');
-    const notePath = config.path + '/' + date + '.txt';
-    fs.ensureFileSync(notePath);
-    return notePath;
+// Open the notes folder
+if (argv.open) {
+    Open.notesFolder();
+    return;
 }
 
-const createNewNote = async (dateObj) => {
-    const notePath = await getNotePathFromDate(dateObj);
-    const noteDataBefore = fs.readFileSync(notePath).toString();
-    const currentNote = spawn('nano', [notePath], {
-        stdio: 'inherit'
-    });
-    // Register new refs
-    currentNote.on('close', () => registerRefsFromNote(notePath, noteDataBefore));
+// Go to a previous note
+if (argv._.length) {
+    Open.previousNote(argv);
+    return;
 }
 
-
-const previousDate = (prevDateNum = 0) => {
-    const date = new Date();
-    date.setDate(date.getDate() - Math.abs(prevDateNum));
-    return date;
+if (argv.search) {
+    Search.allAndLogResults(argv.search);
+    return;
 }
 
-const goToDate = (prevDateNum, isFileId) => {
-    const date = isFileId ? prevDateNum : previousDate(prevDateNum);
-    createNewNote(date);
-}
+// const updateNotePath = (notePath = true) => {
+//     fs.ensureFileSync(configPath);
+//     const config = getConfig();
+//     // Set the config path
+//     config.path = typeof notePath === "string" ? notePath : process.cwd();
+//     fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
+//     console.log('Updated note path:', config.path);
+// }
 
-const previewNote = async (prevDateNum, isFileId = false) => {
-    const date = isFileId ? prevDateNum : previousDate(prevDateNum);
-    const notePath = await getNotePathFromDate(date);
-    const file = fs.readFileSync(notePath);
-    const str = file.toString();
-    const len = notePath.length;
-    // Cat wasn't working so I'm just console.logging the file
-    previewLog(str.trim(), len, notePath);
-}
+// const getNotePathFromDate = async (dateObj) => {
+//     // Make sure config exists
+//     const pathExists = fs.pathExistsSync(configPath);
+//     if (!pathExists) updateNotePath();
+//     const config = getConfig();
+//     // Add 6 hours because dateformat returns the wrong date if the time is exactly at 00:00:00.000
+//     dateObj.setHours(dateObj.getHours() + 6);
+//     // Make a new txt file based on the day
+//     const date = dateformat(dateObj, 'yyyy-mm-dd-ddd');
+//     const notePath = config.path + '/' + date + '.txt';
+//     fs.ensureFileSync(notePath);
+//     return notePath;
+// }
+
+// const createNewNote = async (dateObj) => {
+//     const notePath = await getNotePathFromDate(dateObj);
+//     const noteDataBefore = fs.readFileSync(notePath).toString();
+//     const currentNote = spawn('nano', [notePath], {
+//         stdio: 'inherit'
+//     });
+//     // Register new refs
+//     currentNote.on('close', () => registerRefsFromNote(notePath, noteDataBefore));
+// }
+
+
+// const previousDate = (prevDateNum = 0) => {
+//     const date = new Date();
+//     date.setDate(date.getDate() - Math.abs(prevDateNum));
+//     return date;
+// }
+
+// const goToDate = (prevDateNum, isFileId) => {
+//     const date = isFileId ? prevDateNum : previousDate(prevDateNum);
+//     createNewNote(date);
+// }
+
+// const previewNote = async (prevDateNum, isFileId = false) => {
+//     const date = isFileId ? prevDateNum : previousDate(prevDateNum);
+//     const notePath = await getNotePathFromDate(date);
+//     const file = fs.readFileSync(notePath);
+//     const str = file.toString();
+//     const len = notePath.length;
+//     // Cat wasn't working so I'm just console.logging the file
+//     previewLog(str.trim(), len, notePath);
+// }
 
 // Previews a previous amount of notes
 const previewListOfNotes = async (numNotes) => {
@@ -75,10 +103,7 @@ const previewListOfNotes = async (numNotes) => {
     }
 }
 
-if (argv.search) {
-    searchNotes(argv.search, foundNotesCallback);
-    return;
-}
+
 
 if (argv._.includes('ref')) {
     const refName = argv._[1];
@@ -88,7 +113,7 @@ if (argv._.includes('ref')) {
         const entries = Object.entries(refList);
         entries.forEach(entry => {
             const key = entry[0].replace('ref:', '');
-            const desc = entry[1] ? ` - ${entry[1]}` : '';
+            const desc = entry[1]?.description ? ` - ${entry[1].description}` : '';
             console.log(`${chalk.greenBright.bold(key)}${desc}`)
         });
         return;
@@ -99,9 +124,12 @@ if (argv._.includes('ref')) {
         const entries = Object.entries(refList);
         entries.forEach(entry => {
             const key = entry[0];
-            const desc = entry[1] ? ` - ${entry[1]}` : '';
-            console.log(`${chalk.greenBright.bold(key)}${chalk.italic.yellow(desc)}`)
-            searchNotes(`ref:${entry[0]}`, foundReferenceCallback);
+            const desc = entry[1]?.description ? ` - ${entry[1].description}` : '';
+            console.log(`${chalk.greenBright.bold(key)}${chalk.italic.yellow(desc)}`);
+
+            // Log the ref value from the file
+
+            //searchNotes(`ref:${entry[0]}`, foundReferenceCallback);
             console.log(chalk.greenBright('–'.repeat(30)));
         });
         return;
@@ -110,52 +138,15 @@ if (argv._.includes('ref')) {
     if (argv.edit) {
         return;
     }
-    searchNotes('ref:' + refName, foundReferenceCallback);
+
+    // Return the ref found in the refList.json file rather than searching every file for the ref
+
+    //searchNotes('ref:' + refName, foundReferenceCallback);
     return;
 }
 
 
-// Set the notes path
-if (argv.path) {
-    updateNotePath(argv.path);
-    return;
-}
 
-// Open the notes folder
-if (argv.open) {
-    const config = getConfig();
-    spawn('open', [config.path]);
-
-    return;
-}
-
-// Go to a previous note
-if (argv._.length) {
-    const dateNum = argv._[0];
-    const splitDateNum = dateNum.split('-');
-    // Check if passing a file ID (date)
-    const dateNumDate = new Date(dateNum);
-    const year = dateNumDate.getFullYear();
-    // Open the note at the date
-    if (year > 2000 && splitDateNum.length === 3) {
-        if (argv.p) {
-            previewNote(dateNumDate, true);
-        } else {
-            goToDate(dateNumDate, true);
-        }
-        return;
-    }
-    if (typeof dateNum === "number" && dateNum < 0) {
-        if (argv.p) {
-            // Preview the note
-           previewNote(dateNum);
-        } else {
-            // Open the note
-            goToDate(dateNum);
-        }
-    }
-    return;
-}
 
 // Preview a note
 if (argv.p) {
@@ -188,4 +179,4 @@ if (argv.help) {
 }
 
 // Initialize note
-createNewNote(new Date());
+Utils.newNote(new Date());
