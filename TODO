@@ -9,7 +9,9 @@
 [ ] Cached search results? (maybe if file has not been modified)
 [ ] CLI update (make it easier to update the app from the CLI) -> `note update`
 [ ] Set up help (probably via yargs) 
+[ ] Search all files and register all refs
 [ ] Re-write flags as classes
     [√] Path
     [√] Open
     [√] Search
+    [√] Preview

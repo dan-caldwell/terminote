@@ -21,6 +21,10 @@ class Log {
 
     // Log in green
     static green = message => console.log(chalk.greenBright(message));
+
+    // Log key and value
+    static keyValue = (key, value, keyColor, valueColor) => 
+        console.log(`${chalk[keyColor].bold(key)}${chalk.italic[valueColor](value)}`);
 }
 
 module.exports = Log;

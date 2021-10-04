@@ -29,23 +29,23 @@ const { getRefList } = require('./refs');
 //     return foundFiles;
 // }
 
-const foundNotesCallback = (file, matches, searchTerm) => {
-    if (!matches) return;
-    logNotePathHeader(file.directory, file.directory.length);
-    const regex = new RegExp(searchTerm, 'gi');
-    matches.forEach(match => {
-        const padding = 100;
-        const start = match.index - padding > 0 ? match.index - padding : 0;
-        const end = match.index + padding;
-        const textSlice = file.data.slice(start, end);
-        console.log(chalk.greenBright('–').repeat(file.directory.length));
-        console.log(textSlice.replace(regex, chalk.bgYellowBright.black(searchTerm)));
-        console.log(chalk.greenBright('–').repeat(file.directory.length));
-    });
-}
+// const foundNotesCallback = (file, matches, searchTerm) => {
+//     if (!matches) return;
+//     logNotePathHeader(file.directory, file.directory.length);
+//     const regex = new RegExp(searchTerm, 'gi');
+//     matches.forEach(match => {
+//         const padding = 100;
+//         const start = match.index - padding > 0 ? match.index - padding : 0;
+//         const end = match.index + padding;
+//         const textSlice = file.data.slice(start, end);
+//         console.log(chalk.greenBright('–').repeat(file.directory.length));
+//         console.log(textSlice.replace(regex, chalk.bgYellowBright.black(searchTerm)));
+//         console.log(chalk.greenBright('–').repeat(file.directory.length));
+//     });
+// }
 
-module.exports = {
-    searchNote,
-    searchNotes,
-    foundNotesCallback
-}
+// module.exports = {
+//     searchNote,
+//     searchNotes,
+//     foundNotesCallback
+// }

@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs-extra');
 const Path = require('./Path');
+const Ref = require('./Ref');
 const chalk = require('chalk');
 const dateformat = require('../dateformat');
 const { spawn } = require('child_process');
@@ -43,7 +44,7 @@ class Utils {
             stdio: 'inherit'
         });
         // Register new refs
-        currentNote.on('close', () => registerRefsFromNote(notePath, noteDataBefore));
+        currentNote.on('close', () => Ref.updateFromNote(notePath, noteDataBefore));
     }
 
     static getAllFilesInDir = (dirPath, deep = true, withData = true) => {

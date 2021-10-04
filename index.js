@@ -9,14 +9,14 @@ const { spawn } = require('child_process');
 const chalk = require('chalk');
 
 const { foundReferenceCallback, getRefList, registerRefsFromNote } = require('./components/refs');
-const { previewLog } = require('./components/log');
-const { getConfig, configPath } = require('./components/file');
 
 
 const Path = require('./classes/Path');
 const Open = require('./classes/Open');
 const Utils = require('./classes/Utils');
 const Search = require('./classes/Search');
+const Preview = require('./classes/Preview');
+const Ref = require('./classes/Ref');
 
 // Set the notes path
 if (argv.path) {
@@ -31,13 +31,50 @@ if (argv.open) {
 }
 
 // Go to a previous note
-if (argv._.length) {
+if (argv._.length && !argv._.includes('ref')) {
     Open.previousNote(argv);
     return;
 }
 
+// Search notes
 if (argv.search) {
     Search.allAndLogResults(argv.search);
+    return;
+}
+
+// Preview a note
+if (argv.p) {
+    const prevNumber = typeof argv.p === "number" ? argv.p : null;
+
+    if (argv.p === "week") {
+        Preview.listOfNotes(7);
+    } else {
+        Preview.note(prevNumber);
+    }
+    return;
+}
+
+if (argv._.includes('ref')) {
+    const refName = argv._[1];
+    // List all refs
+    if (argv.list) {
+        Ref.list();
+        return;
+    }
+    // View all refs
+    if (argv.view) {
+        Ref.view();
+        return;
+    }
+    // Edit ref
+    if (argv.edit) {
+        return;
+    }
+
+    // Return the ref found in the refList.json file rather than searching every file for the ref
+    //searchNotes('ref:' + refName, foundReferenceCallback);
+    
+    // Need a flag for registering all refs from the files
     return;
 }
 
@@ -96,69 +133,14 @@ if (argv.search) {
 //     previewLog(str.trim(), len, notePath);
 // }
 
-// Previews a previous amount of notes
-const previewListOfNotes = async (numNotes) => {
-    for (let i = numNotes; i >= 0; i--) {
-        await previewNote(-i);
-    }
-}
-
-
-
-if (argv._.includes('ref')) {
-    const refName = argv._[1];
-    // List all refs
-    if (argv.list) {
-        const refList = getRefList();
-        const entries = Object.entries(refList);
-        entries.forEach(entry => {
-            const key = entry[0].replace('ref:', '');
-            const desc = entry[1]?.description ? ` - ${entry[1].description}` : '';
-            console.log(`${chalk.greenBright.bold(key)}${desc}`)
-        });
-        return;
-    }
-    // View all refs
-    if (argv.view) {
-        const refList = getRefList();
-        const entries = Object.entries(refList);
-        entries.forEach(entry => {
-            const key = entry[0];
-            const desc = entry[1]?.description ? ` - ${entry[1].description}` : '';
-            console.log(`${chalk.greenBright.bold(key)}${chalk.italic.yellow(desc)}`);
-
-            // Log the ref value from the file
-
-            //searchNotes(`ref:${entry[0]}`, foundReferenceCallback);
-            console.log(chalk.greenBright('–'.repeat(30)));
-        });
-        return;
-    }
-    // Edit ref
-    if (argv.edit) {
-        return;
-    }
-
-    // Return the ref found in the refList.json file rather than searching every file for the ref
-
-    //searchNotes('ref:' + refName, foundReferenceCallback);
-    return;
-}
 
 
 
 
-// Preview a note
-if (argv.p) {
-    const prevNumber = typeof argv.p === "number" ? argv.p : null;
 
-    if (argv.p === "week") {
-        previewListOfNotes(7);
-    } else {
-        previewNote(prevNumber);
-    }
-    return;
-}
+
+
+
 
 // Do this via yargs
 if (argv.help) {
