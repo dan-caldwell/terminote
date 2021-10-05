@@ -5,12 +5,12 @@ const chalk = require('chalk');
 class Search {
 
     // Search all notes, return all matches with file info
-    static notes = (searchTerm, deep = true, withData = true) => {
+    static notes = ({ searchTerm, deep = true, withData = true, regexSearch = false }) => {
         const config = Utils.getConfig();
         const files = Utils.getAllFilesInDir(config.path, deep, withData);
         const foundFiles = [];
         files.forEach(file => {
-            const found = this.note({ file, searchTerm });
+            const found = this.note({ file, searchTerm, regexSearch });
             if (found) foundFiles.push({
                 matches: found,
                 searchTerm,
@@ -21,10 +21,10 @@ class Search {
     }
 
     // Search a single note, return matches
-    static note = ({ file, searchTerm }) => {
-        const includes = file.data.includes(searchTerm);
+    static note = ({ file, searchTerm, regexSearch }) => {
+        const includes = regexSearch ? true : file.data.includes(searchTerm);
         if (!includes) return null;
-        const regex = new RegExp(searchTerm, 'gi');
+        const regex = regexSearch ? searchTerm : new RegExp(searchTerm, 'gi');
         const rawMatches = file.data.matchAll(regex);
         if (!rawMatches) return null;
         const matches = Array.from(rawMatches);
@@ -33,7 +33,7 @@ class Search {
 
     // Search all notes and log the results that were found
     static allAndLogResults = (searchTerm) => {
-        const foundFiles = this.notes(searchTerm);
+        const foundFiles = this.notes({ searchTerm });
         if (!foundFiles.length) Log.red('No results found');
         const padding = 100;
         const regex = new RegExp(searchTerm, 'gi');

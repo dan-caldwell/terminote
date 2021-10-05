@@ -1,5 +1,6 @@
 const Utils = require('./Utils');
 const Preview = require('./Preview');
+const Ref = require('./Ref');
 
 class Open {
     static notesFolder = () => {
@@ -22,9 +23,12 @@ class Open {
         }
     }
 
-    static date = (prevDateNum, isFileId) => {
+    static date = async (prevDateNum, isFileId) => {
         const date = isFileId ? prevDateNum : Utils.previousDate(prevDateNum);
-        Utils.newNote(date);
+        // Initialize note
+        const { currentNote, notePath, noteDataBefore } = await Utils.newNote(date);
+        // Register new refs
+        currentNote.on('close', () => Ref.updateFromNote(notePath, noteDataBefore));
     }
 }
 

@@ -22,6 +22,9 @@ class Log {
     // Log in green
     static green = message => console.log(chalk.greenBright(message));
 
+    // Log in yellow
+    static yellow = message => console.log(chalk.yellowBright(message));
+
     // Log key and value
     static keyValue = (key, value, keyColor, valueColor) => 
         console.log(`${chalk[keyColor].bold(key)}${chalk.italic[valueColor](value)}`);

@@ -2,12 +2,16 @@ const path = require('path');
 const fs = require('fs-extra');
 const chalk = require('chalk');
 const Log = require('./Log');
+const Search = require('./Search');
 const Utils = require('./Utils');
 
 class Ref {
 
     // refList.json path
     static listPath = path.join(__dirname, '../refList.json');
+
+    // Capture a ref
+    static captureRegex = /ref:(.*)[\(\n]/g;
 
     // Gets the ref list from refList.json
     static getList = () => {
@@ -57,7 +61,7 @@ class Ref {
     static infoFromMatch = (refMatch, fileData) => {
         // Regex to get the ref name and description
         const regex = /\((.*)\)/;
-        const refNameAndDesc = refMatch.replace('ref:', '').trim();
+        const refNameAndDesc = refMatch[0].replace('ref:', '').trim();
         const refName = refNameAndDesc.replace(regex, '');
         const refDescriptionMatch = refNameAndDesc.match(regex);
         const refDescription = refDescriptionMatch ? refDescriptionMatch[1] : '';
@@ -70,14 +74,17 @@ class Ref {
     }
 
     // Adds/updates a ref on the refList
-    static updateRefOnList = (ref, refList, notePath, noteStat) => [
-        refList[ref.name] = {
+    static updateRefOnList = (ref, refList, notePath, noteStat) => {
+        const newValue = {
             description: ref.description,
             path: notePath,
             value: ref.value,
-            pathModified: noteStat.mtime
+            pathModified: noteStat.mtime.toString()
         }
-    ]
+        if (Utils.isEqualObject(refList[ref.name], newValue)) return false;
+        refList[ref.name] = newValue;
+        return true;
+    }
 
     // On closing a note, this is the callback that will register/update refs from the note
     static updateFromNote = (notePath, noteDataBefore) => {
@@ -85,18 +92,16 @@ class Ref {
         const noteStat = fs.statSync(notePath);
         const refList = this.getList();
 
-        // Regex that will capture a ref
-        const refRegex = /ref:(.*)[\(\n]/g;
         // Before change
-        const allBeforeRefs = noteDataBefore.match(refRegex) || [];
+        const allBeforeRefs = Array.from(noteDataBefore.matchAll(this.captureRegex)) || [];
         const refNamesBefore = allBeforeRefs.map(refMatch => this.infoFromMatch(refMatch, noteData));
         // After change
-        const allAfterRefs = noteData.match(refRegex) || [];
+        const allAfterRefs = Array.from(noteData.matchAll(this.captureRegex)) || [];
         const refNamesAfter = allAfterRefs.map(refMatch => this.infoFromMatch(refMatch, noteData));
 
         // Get deleted refs
         const deletedRefs = refNamesBefore.filter(ref => {
-            return !refNamesAfter.find(afterRef => this.isEqualObject(afterRef, ref));
+            return !refNamesAfter.find(afterRef => Utils.isEqualObject(afterRef, ref));
         });
         // Delete the deleted refs
         deletedRefs.forEach(ref => { delete refList[ref.name] });
@@ -105,13 +110,33 @@ class Ref {
         fs.writeFileSync(this.listPath, JSON.stringify(refList, null, 4));
     }
 
-    // Check if two objects have the same values
-    static isEqualObject = (obj1, obj2) => {
-        for(const key in obj1){
-            if (!(key in obj2)) return false;
-            if (obj1[key] !== obj2[key]) return false;
+    // Register all refs
+    static registerAll = () => {
+        const foundRefs = Search.notes({ searchTerm: this.captureRegex, regexSearch: true });
+        if (!foundRefs.length) Log.red('No refs found');
+        const refList = this.getList();
+        const nonUpdatedRefs = [];
+        foundRefs.forEach(foundRef => {
+            if (!foundRef.matches.length) return;
+            const noteStat = fs.statSync(foundRef.file.directory);
+            foundRef.matches.forEach(match => {
+                const info = this.infoFromMatch(match, foundRef.file.data);
+                const newRef = !refList[info.name];
+                const hasUpdated = this.updateRefOnList(info, refList, foundRef.file.directory, noteStat);
+                if (newRef) {
+                    console.log(chalk.greenBright('Registered ref'), info.name);
+                } else if (hasUpdated) {
+                    console.log(chalk.magentaBright('Updated ref', info.name));
+                } else {
+                    nonUpdatedRefs.push(info);
+                }
+            });
+        });
+        if (nonUpdatedRefs.length) {
+            Log.yellow('No refs to update');
+        } else {
+            fs.writeFileSync(this.listPath, JSON.stringify(refList, null, 4));
         }
-        return true;
     }
 }
 

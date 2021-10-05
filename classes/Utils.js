@@ -1,7 +1,6 @@
 const path = require('path');
 const fs = require('fs-extra');
 const Path = require('./Path');
-const Ref = require('./Ref');
 const chalk = require('chalk');
 const dateformat = require('../dateformat');
 const { spawn } = require('child_process');
@@ -43,8 +42,11 @@ class Utils {
         const currentNote = spawn('nano', [notePath], {
             stdio: 'inherit'
         });
-        // Register new refs
-        currentNote.on('close', () => Ref.updateFromNote(notePath, noteDataBefore));
+        return {
+            currentNote,
+            noteDataBefore,
+            notePath
+        }
     }
 
     static getAllFilesInDir = (dirPath, deep = true, withData = true) => {
@@ -72,6 +74,16 @@ class Utils {
             }
         });
         return arrayOfFiles;
+    }
+
+    // Check if two objects have the same values
+    static isEqualObject = (obj1, obj2) => {
+        if ((!obj1 && obj2) || (!obj2 && obj1)) return false;
+        for (const key in obj1){
+            if (!(key in obj2)) return false;
+            if (obj1[key] !== obj2[key]) return false;
+        }
+        return true;
     }
 }
 

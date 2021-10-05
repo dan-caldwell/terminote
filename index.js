@@ -8,15 +8,13 @@ const dateformat = require('./dateformat');
 const { spawn } = require('child_process');
 const chalk = require('chalk');
 
-const { foundReferenceCallback, getRefList, registerRefsFromNote } = require('./components/refs');
-
 
 const Path = require('./classes/Path');
 const Open = require('./classes/Open');
 const Utils = require('./classes/Utils');
+const Ref = require('./classes/Ref');
 const Search = require('./classes/Search');
 const Preview = require('./classes/Preview');
-const Ref = require('./classes/Ref');
 
 // Set the notes path
 if (argv.path) {
@@ -68,6 +66,11 @@ if (argv._.includes('ref')) {
     }
     // Edit ref
     if (argv.edit) {
+        return;
+    }
+    // Register all refs
+    if (argv.register) {
+        Ref.registerAll();
         return;
     }
 
@@ -160,5 +163,11 @@ if (argv.help) {
     return;
 }
 
-// Initialize note
-Utils.newNote(new Date());
+const init = async () => {
+    // Initialize note
+    const { currentNote, notePath, noteDataBefore } = await Utils.newNote(new Date());
+    // Register new refs
+    currentNote.on('close', () => Ref.updateFromNote(notePath, noteDataBefore));
+}
+
+init();
