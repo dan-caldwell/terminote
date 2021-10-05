@@ -2,12 +2,7 @@
 const { hideBin } = require('yargs/helpers');
 const yargs = require('yargs/yargs');
 const argv = yargs(hideBin(process.argv)).argv;
-const path = require('path');
-const fs = require('fs-extra');
-const dateformat = require('./dateformat');
-const { spawn } = require('child_process');
 const chalk = require('chalk');
-
 
 const Path = require('./classes/Path');
 const Open = require('./classes/Open');
@@ -66,6 +61,7 @@ if (argv._.includes('ref')) {
     }
     // Edit ref
     if (argv.edit) {
+        Ref.edit(refName);
         return;
     }
     // Register all refs
@@ -74,76 +70,10 @@ if (argv._.includes('ref')) {
         return;
     }
 
-    // Return the ref found in the refList.json file rather than searching every file for the ref
-    //searchNotes('ref:' + refName, foundReferenceCallback);
-    
-    // Need a flag for registering all refs from the files
+    // Get a single ref and log it
+    Ref.log(refName);
     return;
 }
-
-// const updateNotePath = (notePath = true) => {
-//     fs.ensureFileSync(configPath);
-//     const config = getConfig();
-//     // Set the config path
-//     config.path = typeof notePath === "string" ? notePath : process.cwd();
-//     fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
-//     console.log('Updated note path:', config.path);
-// }
-
-// const getNotePathFromDate = async (dateObj) => {
-//     // Make sure config exists
-//     const pathExists = fs.pathExistsSync(configPath);
-//     if (!pathExists) updateNotePath();
-//     const config = getConfig();
-//     // Add 6 hours because dateformat returns the wrong date if the time is exactly at 00:00:00.000
-//     dateObj.setHours(dateObj.getHours() + 6);
-//     // Make a new txt file based on the day
-//     const date = dateformat(dateObj, 'yyyy-mm-dd-ddd');
-//     const notePath = config.path + '/' + date + '.txt';
-//     fs.ensureFileSync(notePath);
-//     return notePath;
-// }
-
-// const createNewNote = async (dateObj) => {
-//     const notePath = await getNotePathFromDate(dateObj);
-//     const noteDataBefore = fs.readFileSync(notePath).toString();
-//     const currentNote = spawn('nano', [notePath], {
-//         stdio: 'inherit'
-//     });
-//     // Register new refs
-//     currentNote.on('close', () => registerRefsFromNote(notePath, noteDataBefore));
-// }
-
-
-// const previousDate = (prevDateNum = 0) => {
-//     const date = new Date();
-//     date.setDate(date.getDate() - Math.abs(prevDateNum));
-//     return date;
-// }
-
-// const goToDate = (prevDateNum, isFileId) => {
-//     const date = isFileId ? prevDateNum : previousDate(prevDateNum);
-//     createNewNote(date);
-// }
-
-// const previewNote = async (prevDateNum, isFileId = false) => {
-//     const date = isFileId ? prevDateNum : previousDate(prevDateNum);
-//     const notePath = await getNotePathFromDate(date);
-//     const file = fs.readFileSync(notePath);
-//     const str = file.toString();
-//     const len = notePath.length;
-//     // Cat wasn't working so I'm just console.logging the file
-//     previewLog(str.trim(), len, notePath);
-// }
-
-
-
-
-
-
-
-
-
 
 // Do this via yargs
 if (argv.help) {

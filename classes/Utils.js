@@ -36,12 +36,17 @@ class Utils {
         return notePath;
     }
 
+    // Opens a note at a path
+    static openNote = (notePath) => {
+        return spawn('nano', [notePath], {
+            stdio: 'inherit'
+        });
+    }
+
     static newNote = async (dateObj) => {
         const notePath = await this.notePathFromDate(dateObj);
         const noteDataBefore = fs.readFileSync(notePath).toString();
-        const currentNote = spawn('nano', [notePath], {
-            stdio: 'inherit'
-        });
+        const currentNote = this.openNote(notePath);
         return {
             currentNote,
             noteDataBefore,

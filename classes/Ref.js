@@ -138,6 +138,35 @@ class Ref {
             fs.writeFileSync(this.listPath, JSON.stringify(refList, null, 4));
         }
     }
+
+    // Get a single ref
+    static get = (refName) => {
+        const refList = this.getList();
+        if (!refList[refName]) return null;
+        return refList[refName];
+    }
+
+
+    // Log the contents of a ref
+    static log = (refName) => {
+        const ref = this.get(refName);
+        if (!ref) return Log.red(`Ref ${refName} not found`);
+        const refPathId = ref.path.split('/').pop().split('.').shift().split('-').slice(0, -1).join('-');
+        const headLength = `(${refPathId})`.length + refName.length + `- ${ref.description}`.length + 2;
+        const fullHead = [chalk.blueBright(`(${refPathId})`), chalk.greenBright.bold(refName), chalk.yellow.italic(`- ${ref.description}`)].join(' ');
+        console.log(fullHead);
+        console.log(chalk.blueBright('–'.repeat(headLength)));
+        console.log(ref.value);
+        console.log(chalk.blueBright('–'.repeat(headLength)));
+    }
+
+    static edit = (refName) => {
+        const ref = this.get(refName);
+        if (!ref) return Log.red(`Ref ${refName} not found`);
+        const noteDataBefore = fs.readFileSync(ref.path).toString();
+        const currentNote = Utils.openNote(ref.path);
+        currentNote.on('close', () => this.updateFromNote(ref.path, noteDataBefore));
+    }
 }
 
 module.exports = Ref;
