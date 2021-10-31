@@ -4,7 +4,6 @@ const yargs = require('yargs/yargs');
 const argv = yargs(hideBin(process.argv)).argv;
 const chalk = require('chalk');
 
-const Path = require('./classes/Path');
 const Open = require('./classes/Open');
 const Utils = require('./classes/Utils');
 const Ref = require('./classes/Ref');
@@ -13,7 +12,7 @@ const Preview = require('./classes/Preview');
 
 // Set the notes path
 if (argv.path) {
-    Path.updateNotes(argv.path);
+    Utils.updateNotes(argv.path);
     return;
 }
 

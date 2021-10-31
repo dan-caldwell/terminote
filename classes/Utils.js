@@ -1,6 +1,5 @@
 const path = require('path');
 const fs = require('fs-extra');
-const Path = require('./Path');
 const chalk = require('chalk');
 const dateformat = require('../dateformat');
 const { spawn } = require('child_process');
@@ -25,7 +24,7 @@ class Utils {
     static notePathFromDate = async (dateObj) => {
         // Make sure config exists
         const pathExists = fs.pathExistsSync(Utils.configPath);
-        if (!pathExists) Path.updateNotes();
+        if (!pathExists) this.updateNotes();
         const config = this.getConfig();
         // Add 6 hours because dateformat returns the wrong date if the time is exactly at 00:00:00.000
         dateObj.setHours(dateObj.getHours() + 6);
@@ -84,11 +83,21 @@ class Utils {
     // Check if two objects have the same values
     static isEqualObject = (obj1, obj2) => {
         if ((!obj1 && obj2) || (!obj2 && obj1)) return false;
-        for (const key in obj1){
+        for (const key in obj1) {
             if (!(key in obj2)) return false;
             if (obj1[key] !== obj2[key]) return false;
         }
         return true;
+    }
+
+    static updateNotes = (notePath = true) => {
+        const configPath = Utils.configPath;
+        fs.ensureFileSync(configPath);
+        const config = Utils.getConfig();
+        // Set the config path
+        config.path = typeof notePath === "string" ? notePath : process.cwd();
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
+        console.log('Updated note path:', config.path);
     }
 }
 
