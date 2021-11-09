@@ -1,36 +1,38 @@
 #!/usr/bin/env node
 const { hideBin } = require('yargs/helpers');
 const yargs = require('yargs/yargs');
+const { spawn } = require('child_process');
 const argv = yargs(hideBin(process.argv)).argv;
 const chalk = require('chalk');
 
-const Open = require('./classes/Open');
-const Utils = require('./classes/Utils');
-const Ref = require('./classes/Ref');
-const Search = require('./classes/Search');
-const Preview = require('./classes/Preview');
+const Utils = require('./new_classes/Utils');
+const Preview = require('./new_classes/Preview');
+const Open = require('./new_classes/Open');
+const Search = require('./new_classes/Search');
+const Ref = require('./new_classes/Ref');
+const Log = require('./new_classes/Log');
 
-// Set the notes path
-if (argv.path) {
-    Utils.updateNotes(argv.path);
-    return;
+const config = Utils.getConfig();
+if (!config.path) {
+    Log.red('No note path set in the configuration file. Please set one.');
+    process.exit(1);
 }
 
-// Open the notes folder
-if (argv.open) {
-    Open.notesFolder();
-    return;
-}
-
-// Go to a previous note
-if (argv._.length && !argv._.includes('ref')) {
-    Open.previousNote(argv);
-    return;
-}
-
-// Search notes
-if (argv.search) {
-    Search.allAndLogResults(argv.search);
+if (argv._.includes('ref')) {
+    if (argv.list) {
+        Ref.list();
+        process.exit(1);
+    }
+    if (argv.open) {
+        spawn('open', [Ref.refDir]);
+        process.exit(1);
+    }
+    const refName = argv._[1];
+    if (!refName) {
+        Log.red('Please provide a ref name or option');
+        process.exit(1);
+    }
+    Ref.initiateRef({ refName });
     return;
 }
 
@@ -43,60 +45,32 @@ if (argv.p) {
     } else {
         Preview.note(prevNumber);
     }
-    return;
+    process.exit(1);
 }
 
-if (argv._.includes('ref')) {
-    const refName = argv._[1];
-    // List all refs
-    if (argv.list) {
-        Ref.list();
-        return;
-    }
-    // View all refs
-    if (argv.view) {
-        Ref.view();
-        return;
-    }
-    // Edit ref
-    if (argv.edit) {
-        Ref.edit(refName);
-        return;
-    }
-    // Register all refs
-    if (argv.register) {
-        Ref.registerAll();
-        return;
-    }
-
-    // Get a single ref and log it
-    Ref.log(refName);
-    return;
+// Set the notes path
+if (argv.path) {
+    Utils.updateNotes(argv.path);
+    process.exit(1);
 }
 
-// Do this via yargs
-if (argv.help) {
-    console.log(chalk.blueBright.bold('Terminote'));
-    const cyan = chalk.cyanBright;
-    console.log(`Set notes folder path`, `note --path your_path_here`);
-    console.log(`Open notes folder`, `note --open`);
-    console.log(`Open today's note`, `note`);
-    console.log(`Open a note from n number of days ago`, `note -1`);
-    console.log(`Open a note from a date`, `note 2021-09-21`);
-    console.log(`Preview a note`, `note your_note -p`);
-    console.log(`Create a reference in a note`, "ref:your-ref-name(ref description here)\n```\nref data goes here\n```");
-    console.log(`View a ref`, `note ref your-ref-name`);
-    console.log(`List all refs`, `note ref --list`);
-    console.log(`View all refs with data`, `note ref --view`);
-
-    return;
+// Open the notes folder
+if (argv.open) {
+    Open.notesFolder();
+    process.exit(1);
 }
 
-const init = async () => {
-    // Initialize note
-    const { currentNote, notePath, noteDataBefore } = await Utils.newNote(new Date());
-    // Register new refs
-    currentNote.on('close', () => Ref.updateFromNote(notePath, noteDataBefore));
+// Go to a previous note
+if (argv._.length && !argv._.includes('ref')) {
+    Open.previousNote(argv);
+    process.exit(1);
 }
 
-init();
+// Search notes
+if (argv.search) {
+    Search.allAndLogResults(argv.search);
+    process.exit(1);
+}
+
+// Initialize note
+Utils.newNote(new Date());
