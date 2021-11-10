@@ -1,40 +1,67 @@
 #!/usr/bin/env node
 const { hideBin } = require('yargs/helpers');
 const yargs = require('yargs/yargs');
-const { spawn } = require('child_process');
 const argv = yargs(hideBin(process.argv)).argv;
-const chalk = require('chalk');
 
-const Utils = require('./new_classes/Utils');
-const Preview = require('./new_classes/Preview');
-const Open = require('./new_classes/Open');
-const Search = require('./new_classes/Search');
-const Ref = require('./new_classes/Ref');
-const Log = require('./new_classes/Log');
+const Utils = require('./classes/Utils');
+const Preview = require('./classes/Preview');
+const Open = require('./classes/Open');
+const Search = require('./classes/Search');
 
-const config = Utils.getConfig();
-if (!config.path) {
-    Log.red('No note path set in the configuration file. Please set one.');
+Utils.configPathExists();
+
+const notePath = argv._[0];
+
+// Do this via yargs
+if (argv.help) {
+    console.log(chalk.blueBright.bold('Terminote'));
+    console.log(`Set notes folder path`, `note --path your_path_here`);
+    console.log(`Open notes folder`, `note --open`);
+    console.log(`Open today's note`, `note`);
+    console.log(`Open a note from n number of days ago`, `note -1`);
+    console.log(`Open a note from a date`, `note 2021-09-21`);
+    console.log(`Preview a note`, `note your_note -p`);
+    console.log(`Create a reference in a note`, "ref:your-ref-name(ref description here)\n```\nref data goes here\n```");
+    console.log(`View a ref`, `note ref your-ref-name`);
+    console.log(`List all refs`, `note ref --list`);
+    console.log(`View all refs with data`, `note ref --view`);
+    return;
+}
+
+// Set the notes path
+if (argv.path) {
+    Utils.updateNotes(argv.path);
     process.exit(1);
 }
 
-if (argv._.includes('ref')) {
+// Open the current day's note
+if (!notePath) {
     if (argv.list) {
-        Ref.list();
-        process.exit(1);
+        Utils.list('');
+        return;
+    } else if (argv.view) {
+        Preview.note(`days/${Utils.dateToFormattedFileName(new Date())}`);
+        return;
+    } else if (argv.open) {
+        Open.notePath('');
     }
-    if (argv.open) {
-        spawn('open', [Ref.refDir]);
-        process.exit(1);
+    // Initialize note
+    Utils.newNoteFromDate(new Date());
+    return;
+} else {
+    if (argv.list) {
+        // List all files in the notePath directory
+        Utils.list(notePath);
+    } else if (argv.view) {
+        Preview.note(notePath);
+    } else if (argv.open) {
+        Open.notePath(notePath);
+    } else {
+        Utils.newNote(notePath);
     }
-    const refName = argv._[1];
-    if (!refName) {
-        Log.red('Please provide a ref name or option');
-        process.exit(1);
-    }
-    Ref.initiateRef({ refName });
     return;
 }
+
 
 // Preview a note
 if (argv.p) {
@@ -48,29 +75,8 @@ if (argv.p) {
     process.exit(1);
 }
 
-// Set the notes path
-if (argv.path) {
-    Utils.updateNotes(argv.path);
-    process.exit(1);
-}
-
-// Open the notes folder
-if (argv.open) {
-    Open.notesFolder();
-    process.exit(1);
-}
-
-// Go to a previous note
-if (argv._.length && !argv._.includes('ref')) {
-    Open.previousNote(argv);
-    process.exit(1);
-}
-
 // Search notes
 if (argv.search) {
     Search.allAndLogResults(argv.search);
     process.exit(1);
 }
-
-// Initialize note
-Utils.newNote(new Date());

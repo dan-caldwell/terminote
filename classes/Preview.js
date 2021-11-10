@@ -3,20 +3,23 @@ const Utils = require('./Utils');
 const Log = require('./Log');
 
 class Preview {
-    static note = async (prevDateNum, isFileId = false) => {
-        const date = isFileId ? prevDateNum : Utils.previousDate(prevDateNum);
-        const notePath = await Utils.notePathFromDate(date);
-        const file = fs.readFileSync(notePath);
-        const str = file.toString();
-        const len = notePath.length;
-        // Log the contents of the file
-        Log.preview(str.trim(), len, notePath);
-    }
 
-    static listOfNotes = async (numNotes) => {
-        for (let i = numNotes; i >= 0; i--) {
-            await this.note(-i);
+    static note = rawNotePath => {
+        Utils.notePathExists(rawNotePath);
+        const notePath = Utils.createNotePath(rawNotePath, false);
+        const isDir = fs.statSync(notePath).isDirectory();
+        if (isDir) {
+            Log.red('Note path is a directory');
+            process.exit(1);
         }
+        const exists = fs.existsSync(notePath);
+        if (!exists) {
+            Log.red('Note path does not exist');
+            process.exit(1);
+        }
+        const content = fs.readFileSync(notePath, 'utf-8').trim();
+        const length = notePath.length;
+        Log.preview(content, length, notePath);
     }
 
 }
