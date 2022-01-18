@@ -2,82 +2,19 @@
 const { hideBin } = require('yargs/helpers');
 const yargs = require('yargs/yargs');
 const argv = yargs(hideBin(process.argv)).argv;
-const chalk = require('chalk');
 
-const Open = require('./classes/Open');
 const Utils = require('./classes/Utils');
-const Ref = require('./classes/Ref');
-const Search = require('./classes/Search');
 const Preview = require('./classes/Preview');
+const Open = require('./classes/Open');
+const Search = require('./classes/Search');
 
-// Set the notes path
-if (argv.path) {
-    Utils.updateNotes(argv.path);
-    return;
-}
+Utils.configPathExists();
 
-// Open the notes folder
-if (argv.open) {
-    Open.notesFolder();
-    return;
-}
-
-// Go to a previous note
-if (argv._.length && !argv._.includes('ref')) {
-    Open.previousNote(argv);
-    return;
-}
-
-// Search notes
-if (argv.search) {
-    Search.allAndLogResults(argv.search);
-    return;
-}
-
-// Preview a note
-if (argv.p) {
-    const prevNumber = typeof argv.p === "number" ? argv.p : null;
-
-    if (argv.p === "week") {
-        Preview.listOfNotes(7);
-    } else {
-        Preview.note(prevNumber);
-    }
-    return;
-}
-
-if (argv._.includes('ref')) {
-    const refName = argv._[1];
-    // List all refs
-    if (argv.list) {
-        Ref.list();
-        return;
-    }
-    // View all refs
-    if (argv.view) {
-        Ref.view();
-        return;
-    }
-    // Edit ref
-    if (argv.edit) {
-        Ref.edit(refName);
-        return;
-    }
-    // Register all refs
-    if (argv.register) {
-        Ref.registerAll();
-        return;
-    }
-
-    // Get a single ref and log it
-    Ref.log(refName);
-    return;
-}
+const notePath = argv._[0];
 
 // Do this via yargs
 if (argv.help) {
     console.log(chalk.blueBright.bold('Terminote'));
-    const cyan = chalk.cyanBright;
     console.log(`Set notes folder path`, `note --path your_path_here`);
     console.log(`Open notes folder`, `note --open`);
     console.log(`Open today's note`, `note`);
@@ -88,15 +25,58 @@ if (argv.help) {
     console.log(`View a ref`, `note ref your-ref-name`);
     console.log(`List all refs`, `note ref --list`);
     console.log(`View all refs with data`, `note ref --view`);
-
     return;
 }
 
-const init = async () => {
-    // Initialize note
-    const { currentNote, notePath, noteDataBefore } = await Utils.newNote(new Date());
-    // Register new refs
-    currentNote.on('close', () => Ref.updateFromNote(notePath, noteDataBefore));
+// Set the notes path
+if (argv.path) {
+    Utils.updateNotes(argv.path);
+    process.exit(1);
 }
 
-init();
+// Open the current day's note
+if (!notePath) {
+    if (argv.list) {
+        Utils.list('');
+        return;
+    } else if (argv.view) {
+        Preview.note(`days/${Utils.dateToFormattedFileName(new Date())}`);
+        return;
+    } else if (argv.open) {
+        Open.notePath('');
+    }
+    // Initialize note
+    Utils.newNoteFromDate(new Date());
+    return;
+} else {
+    if (argv.list) {
+        // List all files in the notePath directory
+        Utils.list(notePath);
+    } else if (argv.view) {
+        Preview.note(notePath);
+    } else if (argv.open) {
+        Open.notePath(notePath);
+    } else {
+        Utils.newNote(notePath);
+    }
+    return;
+}
+
+
+// Preview a note
+if (argv.p) {
+    const prevNumber = typeof argv.p === "number" ? argv.p : null;
+
+    if (argv.p === "week") {
+        Preview.listOfNotes(7);
+    } else {
+        Preview.note(prevNumber);
+    }
+    process.exit(1);
+}
+
+// Search notes
+if (argv.search) {
+    Search.allAndLogResults(argv.search);
+    process.exit(1);
+}

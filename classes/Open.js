@@ -1,34 +1,25 @@
 const Utils = require('./Utils');
 const Preview = require('./Preview');
-const Ref = require('./Ref');
+const fs = require('fs-extra');
+const { spawn } = require('child_process');
+const Log = require('./Log');
 
 class Open {
+    
     static notesFolder = () => {
         const config = Utils.getConfig();
         spawn('open', [config.path]);
     }
 
-    static previousNote = (argv) => {
-        const dateNum = argv._[0];
-        const splitDateNum = typeof dateNum === "number" ? [] : dateNum.split('-');
-        // Check if passing a file ID (date)
-        const dateNumDate = new Date(dateNum);
-        const year = dateNumDate.getFullYear();
-        // Open the note at the date
-        if (year > 2000 && splitDateNum.length === 3) {
-            return argv.p ? Preview.note(dateNumDate, true) : this.date(dateNumDate, true);
+    static notePath = rawNotePath => {
+        const dirPath = Utils.createNoteDirPath(rawNotePath, false);
+        const isDir = fs.lstatSync(dirPath).isDirectory();
+        if (!isDir) {
+            Log.red('The path you specified is not a folder.');
+        } else {
+            spawn('open', [dirPath]);
         }
-        if (typeof dateNum === "number" && dateNum < 0) {
-            return argv.p ? Preview.note(dateNumDate) : this.date(dateNumDate);
-        }
-    }
-
-    static date = async (prevDateNum, isFileId) => {
-        const date = isFileId ? prevDateNum : Utils.previousDate(prevDateNum);
-        // Initialize note
-        const { currentNote, notePath, noteDataBefore } = await Utils.newNote(date);
-        // Register new refs
-        currentNote.on('close', () => Ref.updateFromNote(notePath, noteDataBefore));
+        process.exit(1);
     }
 }
 

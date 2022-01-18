@@ -14,4 +14,8 @@
 [ ] Cached search results? (maybe if file has not been modified)
 [ ] CLI update (make it easier to update the app from the CLI) -> `note update`
 [ ] Set up help (probably via yargs) 
-[ ] Search all files and register all refs
+
+[√] Refs/notes can be simplified even further - if you type `note my-note` it will make a file called my-note.txt, or `note work/meeting` will
+    create a meeting.txt file in the work folder. if you just type `note` it creates a note in a `days` folder for the current date.
+[ ] Ability to delete notes
+[ ] Get last created note
